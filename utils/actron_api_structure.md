@@ -985,6 +985,17 @@ applies correction factors at parse time (see `const.py`):
 | `SupplyCurrentRMS_A` | × 1 (none)   | A              | Reads correctly at face value                |
 | `Capacity_kW`        | × 1 (none)   | kW             | Reads correctly at face value                |
 
+**Three-phase exception (#189).** Three-phase Advance units report the same
+controller model (NTW-1000) and firmware, so the model can't separate the two
+cases. Their `Family` can (`"Inverter: Advance Series I Three Phase"`), and
+these units are **not** scaled:
+
+| Raw field            | Scale factor | Example raw values (24 kW system) | Notes                                         |
+| -------------------- | ------------ | --------------------------------- | --------------------------------------------- |
+| `CompPower`          | × 1 (none)   | 122 – 5142                        | Already in W                                  |
+| `SupplyVoltage_Vac`  | × 1 (none)   | 665 – 715                         | Not confirmed as line voltage; passed through |
+| `SupplyCurrentRMS_A` | × 1 (none)   | 0.0                               | Reads 0.0 even under load                     |
+
 > **⚠️ Unconfirmed:** `SupplyPowerRMS_W` and `OutputPowerRMS_W` scaling has
 > not yet been verified from a live payload with non-zero values.  These
 > fields are left unscaled pending confirmation from additional NTW-series
@@ -993,6 +1004,8 @@ applies correction factors at parse time (see `const.py`):
 
 ## Changelog
 
+- **October 2026**: Three-phase Advance units excluded from the NTW-series
+  scaling; their `CompPower` is already in W. See issue #189.
 - **July 2026**: Documented NTW-series telemetry scaling for
   `SupplyVoltage_Vac` (×10) and `CompPower` (×100).  Flagged
   `SupplyPowerRMS_W` / `OutputPowerRMS_W` as unconfirmed.  See issue #133.

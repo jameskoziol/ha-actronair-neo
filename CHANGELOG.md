@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Three-phase Advance outdoor units (`Family` containing `Three Phase`) no longer have the NTW-series ×100 compressor power and ×10 supply voltage scaling applied. They already report watts, so since 2026.9.0 Compressor Power read 100× too high and Compressor Energy grew 100× too fast (#189). Single-phase Inverter units are unchanged. The fix corrects new readings only: the Compressor Energy total and recorded statistics from 2026.9.0 onwards stay inflated, so affected users should correct them with Home Assistant's statistics tools (Developer tools → Statistics → adjust sum).
+
 ### Changed
 
 - Dependabot also updates the dev container's base image (`.devcontainer/Dockerfile`).

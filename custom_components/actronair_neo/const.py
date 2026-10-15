@@ -133,6 +133,12 @@ HUMIDITY_UNAVAILABLE: Final = 3000.0
 # CompPower: Raw 45 -> actual ~4500 W (factor of 100). P ~= V x I gives
 # 230 V x 19 A ~= 4370 W, consistent with 45 x 100 = 4500 W.
 #
+# Three-phase Advance units (Family "Inverter: Advance Series I Three
+# Phase", also controller model NTW-1000) are NOT scaled: they report
+# CompPower in W already (raw 122-5142 on a 24 kW system).  Their raw
+# SupplyVoltage_Vac (~665-715) is not confirmed as line voltage and passes
+# through unchanged; x 10 gave ~7000 VAC.  See GitHub issue #189.
+#
 # SupplyPowerRMS_W / OutputPowerRMS_W: scaling not yet confirmed from a
 # live payload with non-zero values; left unscaled pending further data.
 # See utils/actron_api_structure.md (NTW-series Telemetry Scaling section)
@@ -140,5 +146,7 @@ HUMIDITY_UNAVAILABLE: Final = 3000.0
 
 SUPPLY_VOLTAGE_SCALE_FACTOR: Final = 10  # raw VAC x 10 = actual VAC (NTW-series)
 COMP_POWER_SCALE_FACTOR: Final = 100  # raw W x 100 = actual W (NTW-series)
+# Lower-case Family marker for three-phase units, which are never scaled
+THREE_PHASE_FAMILY_MARKER: Final = "three phase"
 
 WATTS_PER_KILOWATT: Final = 1000  # W -> kW conversion for power display formatting

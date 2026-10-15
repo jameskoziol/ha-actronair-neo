@@ -53,6 +53,7 @@ from .const import (
     OUTDOOR_TEMP_UNAVAILABLE,
     PARSE_CACHE_TTL,
     SUPPLY_VOLTAGE_SCALE_FACTOR,
+    THREE_PHASE_FAMILY_MARKER,
     VALID_FAN_MODES,
     ZONE_OVERRIDE_TTL,
 )
@@ -927,13 +928,18 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         aircon_system = data_sections.get("aircon_system", {})
         ou_system = aircon_system.get("OutdoorUnit", {})
 
-        # NTW-series (Advance/Inverter) units report SupplyVoltage_Vac and
-        # CompPower at reduced scale; other series (Classic, Aires) report
+        # Single-phase Inverter units report SupplyVoltage_Vac and CompPower
+        # at reduced scale (#133); other series (Classic, Aires) report
         # engineering-unit values already.  Gate scaling to Inverter family
         # only to prevent over-scaling on non-NTW devices (e.g. 230 VAC ->
-        # 2300 VAC on a Classic unit).
+        # 2300 VAC on a Classic unit).  The controller model can't tell the
+        # cases apart (three-phase Advance units also report NTW-1000), so
+        # the Family string decides: three-phase Inverter families already
+        # report CompPower in W and pass through unscaled (#189).
         family = ou_system.get("Family", "")
-        is_ntw_series = "Inverter" in family
+        uses_reduced_scale = (
+            "Inverter" in family and THREE_PHASE_FAMILY_MARKER not in family.lower()
+        )
 
         # Handle API typos in field names
         supply_current = ou_live.get(
@@ -943,13 +949,13 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
             "SupplyPowerRMS_W", ou_live.get("SuppyPowerRMS_W", 0)
         )
 
-        # Apply correction factors only for NTW-series units.  Use explicit
+        # Apply correction factors only to reduced-scale units.  Use explicit
         # None checks so that a genuine zero reading (e.g. compressor off) is
         # preserved as 0 and not mistaken for a missing value.
         raw_voltage = ou_live.get("SupplyVoltage_Vac")
         if raw_voltage is None:
             supply_voltage: float = 0
-        elif is_ntw_series:
+        elif uses_reduced_scale:
             supply_voltage = raw_voltage * SUPPLY_VOLTAGE_SCALE_FACTOR
         else:
             supply_voltage = raw_voltage
@@ -957,7 +963,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         raw_comp_power = ou_live.get("CompPower")
         if raw_comp_power is None:
             comp_power: float = 0
-        elif is_ntw_series:
+        elif uses_reduced_scale:
             comp_power = raw_comp_power * COMP_POWER_SCALE_FACTOR
         else:
             comp_power = raw_comp_power

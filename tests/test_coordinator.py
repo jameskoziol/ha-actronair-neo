@@ -1609,6 +1609,7 @@ class TestOutdoorUnitScaling:
         voltage: float = 23.0,
         current: float = 19.0,
         capacity_kw: float = 13.0,
+        family: str = "Tru-Inverter",
     ) -> dict:
         """Build a minimal data_sections dict for _parse_outdoor_unit_data."""
         return {
@@ -1623,7 +1624,7 @@ class TestOutdoorUnitScaling:
             },
             "aircon_system": {
                 "OutdoorUnit": {
-                    "Family": "Tru-Inverter",
+                    "Family": family,
                     "CtrlBoardType": "Type 300",
                     "Capacity_kW": capacity_kw,
                 }
@@ -1722,3 +1723,57 @@ class TestOutdoorUnitScaling:
         assert result["comp_power"] == pytest.approx(4500.0)
         assert result["supply_voltage"] == pytest.approx(230.0)
         assert result["supply_current"] == pytest.approx(19.0)
+
+    THREE_PHASE_FAMILY = "Inverter: Advance Series I Three Phase"
+
+    def test_three_phase_idle_payload_not_scaled(
+        self, coordinator_instance: ActronDataCoordinator
+    ) -> None:
+        """Reported idle three-phase payload passes through unscaled (#189)."""
+        result = coordinator_instance._parse_outdoor_unit_data(
+            self._make_sections(
+                comp_power=0,
+                voltage=698.0,
+                current=0.0,
+                capacity_kw=24.0,
+                family=self.THREE_PHASE_FAMILY,
+            )
+        )
+
+        assert result["comp_power"] == 0
+        # 698.0, not 6980.0
+        assert result["supply_voltage"] == pytest.approx(698.0)
+        assert result["supply_current"] == pytest.approx(0.0)
+
+    def test_three_phase_running_power_not_scaled(
+        self, coordinator_instance: ActronDataCoordinator
+    ) -> None:
+        """Three-phase CompPower is already in W (reported history, #189)."""
+        result = coordinator_instance._parse_outdoor_unit_data(
+            self._make_sections(
+                comp_power=3276,
+                voltage=669.0,
+                current=0.0,
+                capacity_kw=24.0,
+                family=self.THREE_PHASE_FAMILY,
+            )
+        )
+
+        # 3276 W, not 327600 W
+        assert result["comp_power"] == pytest.approx(3276.0)
+        assert result["supply_voltage"] == pytest.approx(669.0)
+
+    def test_three_phase_marker_case_insensitive(
+        self, coordinator_instance: ActronDataCoordinator
+    ) -> None:
+        """Synthetic capitalisation variant: the marker match ignores case."""
+        result = coordinator_instance._parse_outdoor_unit_data(
+            self._make_sections(
+                comp_power=3276,
+                voltage=669.0,
+                family="Inverter: Advance Series I THREE PHASE",
+            )
+        )
+
+        assert result["comp_power"] == pytest.approx(3276.0)
+        assert result["supply_voltage"] == pytest.approx(669.0)
