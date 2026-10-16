@@ -1568,28 +1568,26 @@ class TestCoordinatorPushIntegration:
     def test_push_state_stale_when_heartbeat_old(
         self, coordinator_instance: ActronDataCoordinator
     ) -> None:
-        import datetime
+        import datetime as dt
 
         c = coordinator_instance
         c.enable_push = True
         transport = MagicMock()
         transport.state = PushState.CONNECTED
-        transport.last_heartbeat = datetime.datetime.now() - datetime.timedelta(
-            seconds=10000
-        )
+        transport.last_heartbeat = dt.datetime.now() - dt.timedelta(seconds=10000)
         c._push_transport = transport
         assert c.push_state is PushState.STALE
 
     def test_push_state_passthrough_when_fresh(
         self, coordinator_instance: ActronDataCoordinator
     ) -> None:
-        import datetime
+        import datetime as dt
 
         c = coordinator_instance
         c.enable_push = True
         transport = MagicMock()
         transport.state = PushState.CONNECTED
-        transport.last_heartbeat = datetime.datetime.now()
+        transport.last_heartbeat = dt.datetime.now()
         c._push_transport = transport
         assert c.push_state is PushState.CONNECTED
 

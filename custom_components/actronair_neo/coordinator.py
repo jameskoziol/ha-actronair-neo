@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import datetime
+import datetime as dt
 import inspect
 import logging
 from datetime import timedelta
@@ -96,11 +96,11 @@ _QUE_BROADCAST_METADATA_KEYS: frozenset[str] = frozenset(
 )
 
 
-def _now_matching(reference: datetime.datetime | None = None) -> datetime.datetime:
+def _now_matching(reference: dt.datetime | None = None) -> dt.datetime:
     """Return current datetime matching tz-awareness of reference."""
     if reference is not None and reference.tzinfo is not None:
-        return datetime.datetime.now(datetime.UTC)
-    return datetime.datetime.now()  # noqa: DTZ005
+        return dt.datetime.now(dt.UTC)
+    return dt.datetime.now()  # noqa: DTZ005
 
 
 class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
@@ -148,7 +148,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         # Fan mode control attributes
         self._continuous_fan = False
         self._fan_mode_change_lock = asyncio.Lock()
-        self._last_fan_mode_change: datetime.datetime | None = None
+        self._last_fan_mode_change: dt.datetime | None = None
         self._min_fan_mode_interval = MIN_FAN_MODE_INTERVAL
 
         # Zone state writes update the full EnabledZones array, so they must be
@@ -157,9 +157,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         # Maps zone index -> (desired_enabled_state, created_at). Each override
         # expires after ZONE_OVERRIDE_TTL so a state the API never confirms does
         # not stick permanently.
-        self._pending_zone_state_overrides: dict[
-            int, tuple[bool, datetime.datetime]
-        ] = {}
+        self._pending_zone_state_overrides: dict[int, tuple[bool, dt.datetime]] = {}
 
         # After a state-changing command, force the next refresh to bypass the
         # API response cache so we re-fetch fresh state rather than a cached
@@ -167,7 +165,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         self._force_fresh_on_next_update = False
 
         # Cache management
-        self._last_cache_cleanup: datetime.datetime | None = None
+        self._last_cache_cleanup: dt.datetime | None = None
 
         # Enhanced zone management
         self.zone_preset_manager = ZonePresetManager(hass, device_id)
@@ -178,12 +176,12 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         # Performance optimization: data processing cache
         self._parsed_data_cache: CoordinatorData | None = None
         self._raw_data_hash: int | None = None
-        self._parsed_data_cache_timestamp: datetime.datetime | None = None
+        self._parsed_data_cache_timestamp: dt.datetime | None = None
 
         # Memory optimization: track cache sizes and cleanup
         self._cache_hit_count = 0
         self._cache_miss_count = 0
-        self._last_memory_cleanup: datetime.datetime | None = None
+        self._last_memory_cleanup: dt.datetime | None = None
 
     def validate_fan_mode(self, mode: str, *, continuous: bool = False) -> str:
         """
@@ -442,7 +440,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         if not isinstance(enabled_zones, list):  # pyright: ignore[reportUnnecessaryIsInstance]
             return
 
-        now = datetime.datetime.now()  # noqa: DTZ005
+        now = dt.datetime.now()  # noqa: DTZ005
         resolved_zone_indexes: list[int] = []
 
         for zone_index, (
@@ -555,7 +553,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         # Cache the parsed result
         self._raw_data_hash = raw_data_hash
         self._parsed_data_cache = parsed_data
-        self._parsed_data_cache_timestamp = datetime.datetime.now()  # noqa: DTZ005
+        self._parsed_data_cache_timestamp = dt.datetime.now()  # noqa: DTZ005
 
         # Periodic memory cleanup
         await self._maybe_cleanup_memory()
@@ -567,7 +565,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         if self._parsed_data_cache_timestamp is None:
             return True
         age = (
-            datetime.datetime.now()  # noqa: DTZ005
+            dt.datetime.now()  # noqa: DTZ005
             - self._parsed_data_cache_timestamp
         ).total_seconds()
         return age >= PARSE_CACHE_TTL
@@ -1280,7 +1278,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         return self.api.error_count
 
     @property
-    def last_successful_api_request(self) -> datetime.datetime | None:
+    def last_successful_api_request(self) -> dt.datetime | None:
         """Return the timestamp of the last successful API request."""
         return self.api.last_successful_request
 
@@ -1324,7 +1322,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
 
     async def _maybe_cleanup_cache(self) -> None:
         """Perform periodic cache cleanup if needed."""
-        now = datetime.datetime.now()  # noqa: DTZ005
+        now = dt.datetime.now()  # noqa: DTZ005
 
         # Cleanup every 5 minutes
         if (
@@ -1336,7 +1334,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
 
     async def _maybe_cleanup_memory(self) -> None:
         """Perform periodic memory optimization cleanup."""
-        now = datetime.datetime.now()  # noqa: DTZ005
+        now = dt.datetime.now()  # noqa: DTZ005
 
         # Memory cleanup every 10 minutes
         if (
@@ -1575,7 +1573,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
         """Apply rate limiting for fan mode changes."""
         if self._last_fan_mode_change:
             elapsed = (
-                datetime.datetime.now()  # noqa: DTZ005
+                dt.datetime.now()  # noqa: DTZ005
                 - self._last_fan_mode_change
             ).total_seconds()
             if elapsed < self._min_fan_mode_interval:
@@ -1603,7 +1601,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
 
             # Update state tracking
             self._last_fan_mode_change = (
-                datetime.datetime.now()  # noqa: DTZ005
+                dt.datetime.now()  # noqa: DTZ005
             )
             self._continuous_fan = continuous
 
@@ -1748,7 +1746,7 @@ class ActronDataCoordinator(DataUpdateCoordinator["CoordinatorData"]):
 
             self._pending_zone_state_overrides[zone_index] = (
                 enable,
-                datetime.datetime.now(),  # noqa: DTZ005
+                dt.datetime.now(),  # noqa: DTZ005
             )
             self._optimistically_update_zone_state(modified_statuses)
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -317,7 +317,7 @@ async def test_diagnostics_push_block_live_transport(
         await hass.async_block_till_done()
 
     coordinator = mock_config_entry.runtime_data
-    hb = datetime.datetime(2026, 6, 1, 12, 0, 0)  # noqa: DTZ001
+    hb = dt.datetime(2026, 6, 1, 12, 0, 0)  # noqa: DTZ001
     transport = MagicMock()
     transport.last_heartbeat = hb
     transport.reconnect_count = 3
